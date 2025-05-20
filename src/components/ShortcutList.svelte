@@ -1,6 +1,8 @@
-<script>
+<script lang="ts">
+    import type { Shortcut } from '../lib/interfaces';
   import ShortcutPreview from './ShortcutPreview.svelte';
-  export let shortcuts = [];
+  
+   export let shortcuts: Shortcut[] = [];
   export let loading = false;
 </script>
 

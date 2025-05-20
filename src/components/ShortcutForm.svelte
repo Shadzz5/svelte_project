@@ -1,8 +1,7 @@
-<script>
+<script lang="ts">
   import { appState } from '../lib/appStore.js';
   import { API_URL } from '../lib/api.js';
   import { createEventDispatcher } from 'svelte';
-  import { get } from 'svelte/store';
 
   let isOpen = false;
   let title = '';
@@ -13,12 +12,16 @@
   let linux = '';
   let software = '';
   let categories = [];
+  let error = '';
 
   const dispatch = createEventDispatcher();
-  $: state = get(appState);
+  let state;
+
+  $: appState.subscribe(value => state = value);
 
   async function handleSubmit(e) {
     e.preventDefault();
+
     const shortcut = {
       title,
       description,
@@ -26,46 +29,88 @@
       windows,
       macos,
       linux,
-      software: '/software/' + software,
-      categories: categories.map(c => '/categories/' + c),
+      software: `/software/${software}`,
+      categories: categories.map(c => `/categories/${c}`),
     };
-    const response = await fetch(API_URL + 'shortcuts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(shortcut),
-    });
-    if (response.ok) {
-      dispatch('save');
+
+    try {
+      const response = await fetch(`${API_URL}shortcuts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shortcut),
+      });
+
+      if (response.ok) {
+        dispatch('save');
+        isOpen = false;
+        clearForm();
+      } else {
+        error = "Erreur lors de l'envoi du raccourci.";
+      }
+    } catch (err) {
+      error = "Erreur réseau : " + err.message;
     }
-    isOpen = false;
+  }
+
+  function clearForm() {
+    title = '';
+    description = '';
+    context = '';
+    windows = '';
+    macos = '';
+    linux = '';
+    software = '';
+    categories = [];
+    error = '';
   }
 </script>
 
-<div class="flex flex-col gap-4 p-4 my-4 rounded-lg shadow-md">
-  <div class="flex justify-between items-center">
-    <h2 class="text-2xl font-bold">Add Shortcut</h2>
-    <button on:click={() => isOpen = !isOpen} class="text-blue-500">
-      {isOpen ? "Close" : "Open"}
-    </button>
-  </div>
-  <form on:submit|preventDefault={handleSubmit} class={`flex flex-col gap-4 ${isOpen ? "h-auto" : "h-0 overflow-hidden"}`} style="transition: height 0.3s ease-in-out">
-    <input type="text" bind:value={title} placeholder="Title" required />
-    <textarea bind:value={description} placeholder="Description" rows="2"></textarea>
-    <textarea bind:value={context} placeholder="Context" rows="2"></textarea>
-    <input type="text" bind:value={windows} placeholder="Windows" />
-    <input type="text" bind:value={macos} placeholder="Mac OS" />
-    <input type="text" bind:value={linux} placeholder="Linux" />
-    <select bind:value={software} required>
-      <option value="">Select software...</option>
-      {#each state.software as s}
-        <option value={s.id}>{s.name}</option>
-      {/each}
-    </select>
-    <select bind:value={categories} multiple>
-      {#each state.categories as c}
-        <option value={c.id}>{c.name}</option>
-      {/each}
-    </select>
-    <button type="submit" class="bg-blue-500 text-white py-2 px-4 rounded cursor-pointer">Add Shortcut</button>
-  </form>
-</div>
+<style>
+  .container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    margin: 1rem 0;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .header h2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+  }
+
+  .toggle-button {
+    color: #3b82f6;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    cursor: pointer;
+  }
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    overflow: hidden;
+    transition: all 0.3s ease-in-out;
+  }
+
+  .form.closed {
+    max-height: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .form.open {
+    max-height: 100
+  }
+  </style>
